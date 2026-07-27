@@ -1,4 +1,5 @@
-##  Feature-First Clean Architecture (Vertical Slice Architecture)
+## Feature-First Clean Architecture (Vertical Slice Architecture)
+
 ## 1. What Is It?
 
 **Feature-First Clean Architecture** (or **Vertical Slice**) organizes code by **business feature** (`login`, `paymet`) rather than technical layers (`controllers`, `repositories`).
@@ -18,11 +19,11 @@ src/features/user/
 
 ## 2. How Feature-First Enforces SOLID
 
-* **S — Single Responsibility:** Each feature slice owns *one* business domain.
-* **O — Open/Closed:** Add new features by creating new folders—without modifying existing feature code.
-* **L — Liskov Substitution:** Swap implementations (e.g., Postgres $\rightarrow$ In-Memory) behind domain interfaces.
-* **I — Interface Segregation:** Interfaces are small and feature-focused (`ITicketRepository`), not monolithic.
-* **D — Dependency Inversion:** Use cases depend on abstract domain interfaces, never on Express or Postgres.
+- **S — Single Responsibility:** Each feature slice owns _one_ business domain.
+- **O — Open/Closed:** Add new features by creating new folders—without modifying existing feature code.
+- **L — Liskov Substitution:** Swap implementations (e.g., Postgres $\rightarrow$ In-Memory) behind domain interfaces.
+- **I — Interface Segregation:** Interfaces are small and feature-focused (`ITicketRepository`), not monolithic.
+- **D — Dependency Inversion:** Use cases depend on abstract domain interfaces, never on Express or Postgres.
 
 ---
 
@@ -37,9 +38,9 @@ src/features/user/
 
 ### Core Distinctions
 
-* **vs. MVC:** MVC tightly couples business logic to database models. Feature-First decouples business logic entirely from Express and SQL.
-* **vs. Layer-First:** Layer-First forces you to open 4+ distant folders to edit one feature ("shotgun surgery"). Feature-First keeps all related code in **one folder**.
-* **vs. Microservices:** Feature-First gives you the modularity of microservices inside a single, easy-to-deploy **Modular Monolith**.
+- **vs. MVC:** MVC tightly couples business logic to database models. Feature-First decouples business logic entirely from Express and SQL.
+- **vs. Layer-First:** Layer-First forces you to open 4+ distant folders to edit one feature ("shotgun surgery"). Feature-First keeps all related code in **one folder**.
+- **vs. Microservices:** Feature-First gives you the modularity of microservices inside a single, easy-to-deploy **Modular Monolith**.
 
 ---
 
@@ -50,11 +51,11 @@ src/features/user/
 3. **Microservice Ready:** If a feature outgrows the monolith, you can extract its folder into a standalone service with minimal refactoring.
 4. **Stack Alignment:** Keeps your backend directory structure matching your frontend (e.g., Flutter Feature-First).
 
-![[clean architecture.png]]
+![Clean Architecture](../images/clean-architecture.png)
 
 Fig: Clean Architecture
 
-###  1. Directory Structure
+### 1. Directory Structure
 
 ```bash
 src/
