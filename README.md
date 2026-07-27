@@ -112,3 +112,4 @@ If this is your first time working with the project, read the documentation in t
 7. [Setup & Prerequisites Guide Stripe & bKash](./docs/03-Payment/Setup-&-Prerequisites-Guide-Stripe-&-bKash.md)
 8. [Payment Gateway (Bkash, Stripe)](<./docs/03-Payment/Payment-Gateway-(Bkash,Stripe).md>)
 9. [API Documentation & curl Testing Guide](./docs/04-Testing/API-Documentation-&-curl-Testing-Guide.md)
+10. [Environment Configuration Guide and Local ngrok Setup](./docs/04-Testing/Environment-Configuration-Guide-and-Local-ngrok-Setup.md)
