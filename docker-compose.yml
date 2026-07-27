@@ -1,0 +1,30 @@
+services:
+  ecommerce-backend:
+    container_name: ecommerce-backend
+    build:
+      context: ./
+      dockerfile: Dockerfile.dev
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - DATABASE_URL=postgresql://postgres:postgres@ecommerce-database:5432/ecommerce
+    depends_on:
+      - ecommerce-database
+    volumes:
+      - ./:/app
+      - /app/node_modules
+
+  ecommerce-database:
+    container_name: ecommerce-database
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ecommerce
+    ports:
+      - "5430:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+volumes:
+  pgdata:
