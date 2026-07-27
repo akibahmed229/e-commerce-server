@@ -15,25 +15,26 @@ export class CreateStripePaymentIntentUseCase {
         private readonly stripeGateway: StripeGateway
     ) { }
 
-    async execute(input: CreateStripeIntentDTO): Promise<Result<{ clientSecret: string }, Error>> {
+    async execute(input: CreateStripeIntentDTO): Promise<Result<{ clientSecret: string; amountUsd: number; exchangeRate: number }, Error>> {
         const order = await this.orderRepo.getOrderById(input.orderId);
         if (!order) return Result.fail(new Error("Order not found"));
         if (order.userId !== input.userId) return Result.fail(new Error("You do not own this order"));
         if (order.status !== "pending") return Result.fail(new Error(`Order is already ${order.status}`));
 
-        const { clientSecret, paymentIntentId } = await this.stripeGateway.createPaymentIntent(
+        const { clientSecret, paymentIntentId, amountUsd, exchangeRate } = await this.stripeGateway.createPaymentIntent(
             parseFloat(order.totalAmount),
-            "usd",
-            { orderId: order.id }
+            order.id
         );
 
         await this.paymentRepo.createPayment({
             orderId: order.id,
             provider: "stripe",
             transactionId: paymentIntentId,
-            status: "pending"
-        })
+            status: "pending",
+            rawResponse: { amountBdt: order.totalAmount, amountUsd, exchangeRate },
+        });
 
-        return Result.ok({ clientSecret })
+        return Result.ok({ clientSecret, amountUsd, exchangeRate });
     }
 }
+

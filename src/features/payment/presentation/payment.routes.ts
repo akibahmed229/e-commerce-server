@@ -36,7 +36,7 @@ const paymentController = new PaymentController(
     queryBkashUseCase
 );
 
-// PUBLIC — hit by Stripe's/bKash's servers directly, not your logged-in user's JWT, raw body required
+// PUBLIC — hit by Stripe's/bKash's servers directly, not logged-in user's JWT, raw body required
 router.post("/stripe/webhook",
     raw({ type: "application/json" }),
     paymentController.handleStripeWebhookEvent

@@ -4,6 +4,8 @@ import { IOrderRepository, CreateOrderInput } from "../domain/order.repository";
 import { OrderEntity } from "../domain/order.entity";
 import { ordersTable, orderItemsTable } from "./persistence/order.schema";
 import { productsTable } from "@features/product/infrastructure/persistence/product.schema";
+import { OrderCalculator } from "../domain/order-calculator";
+import { DrizzleStockReducer } from "@features/product/infrastructure/drizzle-stock-reducer";
 
 export class DrizzleOrderRepository implements IOrderRepository {
     constructor(private readonly db: NodePgDatabase) { }
@@ -21,36 +23,27 @@ export class DrizzleOrderRepository implements IOrderRepository {
 
             for (const item of input.items) {
                 const product = productMap.get(item.productId)!;
-                if (product.status !== "active") {
-                    throw new Error(`Product "${product.name}" is not available`);
-                }
-                if (product.stock < item.quantity) {
-                    throw new Error(`Insufficient stock for "${product.name}" (available: ${product.stock})`);
-                }
+                if (product.status !== "active") throw new Error(`Product "${product.name}" is not available`);
+                if (product.stock < item.quantity) throw new Error(`Insufficient stock for "${product.name}"`);
             }
 
-            let totalAmount = 0;
-            const orderItemsData = input.items.map((item) => {
-                const product = productMap.get(item.productId)!;
-                const price = parseFloat(product.price);
-                const subtotal = price * item.quantity;
-                totalAmount += subtotal;
-                return {
+            // deterministic algorithm — replaces the old inline parseFloat/toFixed logic
+            const { lines, totalAmount } = OrderCalculator.calculate(
+                input.items.map((item) => ({
                     productId: item.productId,
                     quantity: item.quantity,
-                    price: price.toFixed(2),
-                    subtotal: subtotal.toFixed(2),
-                };
-            });
+                    unitPrice: productMap.get(item.productId)!.price,
+                }))
+            );
 
             const [order] = await tx
                 .insert(ordersTable)
-                .values({ userId: input.userId, totalAmount: totalAmount.toFixed(2), status: "pending" })
+                .values({ userId: input.userId, totalAmount, status: "pending" })
                 .returning();
 
             const items = await tx
                 .insert(orderItemsTable)
-                .values(orderItemsData.map((item) => ({ ...item, orderId: order.id })))
+                .values(lines.map((line) => ({ productId: line.productId, quantity: line.quantity, price: line.unitPrice, subtotal: line.subtotal, orderId: order.id })))
                 .returning();
 
             return { ...order, items };
@@ -72,7 +65,7 @@ export class DrizzleOrderRepository implements IOrderRepository {
         if (orderIds.length === 0) return [];
 
         const allItems = await this.db.select().from(orderItemsTable).where(inArray(orderItemsTable.orderId, orderIds));
-        const itemsByOrder = new Map<string, typeof allItems>();
+        const itemsByOrder = new Map < string, typeof allItems > ();
         for (const item of allItems) {
             const list = itemsByOrder.get(item.orderId) ?? [];
             list.push(item);
@@ -91,21 +84,14 @@ export class DrizzleOrderRepository implements IOrderRepository {
         return this.db.transaction(async (tx) => {
             const [order] = await tx.select().from(ordersTable).where(eq(ordersTable.id, orderId));
             if (!order) return false;
-            if (order.status === "paid") return true; // idempotent — webhooks can fire more than once
+            if (order.status === "paid") return true; // idempotent guard — unchanged from before
 
             const items = await tx.select().from(orderItemsTable).where(eq(orderItemsTable.orderId, orderId));
 
-            for (const item of items) {
-                const [product] = await tx.select().from(productsTable).where(eq(productsTable.id, item.productId));
-                if (!product || product.stock < item.quantity) {
-                    throw new Error(`Insufficient stock for product ${item.productId} during payment completion`);
-                }
-
-                await tx.update(productsTable).set({ stock: product.stock - item.quantity }).where(eq(productsTable.id, item.productId));
-            }
+            const stockReducer = new DrizzleStockReducer(tx as any); // same transaction context
+            await stockReducer.reduce(items.map((item) => ({ productId: item.productId, quantity: item.quantity })));
 
             await tx.update(ordersTable).set({ status: "paid" }).where(eq(ordersTable.id, orderId));
-
             return true;
         });
     }
