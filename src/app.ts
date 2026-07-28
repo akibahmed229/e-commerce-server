@@ -8,6 +8,7 @@ import cors from "cors";
 import { orderRoutes } from "@features/order/presentation/order.routes";
 import { paymentRoutes } from "@features/payment/presentation/payment.routes";
 import { corsOptions } from "@core/config/corsOptions";
+import { byPassExpressJson } from "@core/middlewares/bypass-express-json";
 
 export const app: Express = express();
 
@@ -15,26 +16,16 @@ app.use(cookieParser());
 app.use(logger);
 app.use(cors(corsOptions));
 
-// bypass express.json() specifically for the Stripe webhook path — it needs raw bytes
-app.use((req, res, next) => {
-    if (req.originalUrl === "/api/v1/payments/stripe/webhook") {
-        next();
-    } else {
-        express.json()(req, res, next);
-    }
-});
-
-
-// mount payment routes FIRST, before any global json() — its webhook route
+// bypass json() for - stripe webhook
 // handles its own raw() parsing internally via payment.routes.ts
-app.use("/api/v1/payments", paymentRoutes);
+app.use(byPassExpressJson);
 
-// json() applied only from here on, so it never touches /payments/stripe/webhook
-app.use(express.json());
+
 
 app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/products", productRoutes);
 app.use("/api/v1/orders", orderRoutes);
+app.use("/api/v1/payments", paymentRoutes);
 
 app.use(errorHandler);
 
